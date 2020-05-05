@@ -14,6 +14,8 @@ public class Player : MonoBehaviour
     private CharacterController _controller; // componente que detecta todo o ambiente do Terrain (faz a função do OnCollisionEnter)
     private Animator _animator;
 
+    bool attackIsReady = true;
+
     // Start is called before the first frame update
     void Start()
     {
@@ -24,7 +26,8 @@ public class Player : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        Move();
+        this.Move();
+        this.GetMouseInput();
     }
 
     void Move()
@@ -34,11 +37,27 @@ public class Player : MonoBehaviour
 {
             if (Input.GetKey(KeyCode.W)) // start move
             {
-                MoveDirection = Vector3.forward * speed; 
-                MoveDirection = transform.TransformDirection(MoveDirection); // permite que vc movimente o personagem em uma determinada direção
+                if (_animator.GetBool("Attack1") == false)
+                {
+                    _animator.SetBool("Walking", true);
+                    _animator.SetInteger("Transition", 1);
+
+                    MoveDirection = Vector3.forward * speed; 
+                    MoveDirection = transform.TransformDirection(MoveDirection); // permite que vc movimente o personagem em uma determinada direção
+                }
+                else
+                {
+                    _animator.SetBool("Walking", false);
+
+                    MoveDirection = Vector3.zero; // zera o Vector3 (0f, 0f, 0f)
+                    StartCoroutine(Attack(1));
+                }
             }
             if (Input.GetKeyUp(KeyCode.W)) // stop move
             {
+                _animator.SetBool("Walking", false);
+                _animator.SetInteger("Transition", 0);
+
                 MoveDirection = Vector3.zero; // zera o Vector3 (0f, 0f, 0f)
             }
         }
@@ -53,5 +72,42 @@ public class Player : MonoBehaviour
         // Effective Movementation
         _controller.Move(MoveDirection * Time.deltaTime);
 
+    }
+
+    void GetMouseInput()
+    {
+        if (_controller.isGrounded)
+        {
+            if (Input.GetMouseButtonDown(0))
+            {
+                if (_animator.GetBool("Walking"))
+                {
+                    _animator.SetBool("Walking", false);
+                    _animator.SetInteger("Transition", 0);
+                }
+                if  (!_animator.GetBool("Walking"))
+                {
+                    // Attack
+                    StartCoroutine(Attack(0));
+                }
+            }
+        }
+    }
+
+    IEnumerator Attack(int transitionValue)
+    {
+        if (attackIsReady == true)
+        {
+            attackIsReady = false;
+            _animator.SetBool("Attack1", true);
+            _animator.SetInteger("Transition", 2);
+
+            yield return new WaitForSeconds(1.3f);
+
+            _animator.SetInteger("Transition", transitionValue);
+            _animator.SetBool("Attack1", false);
+            attackIsReady = true;
+
+        }
     }
 }
