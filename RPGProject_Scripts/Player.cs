@@ -9,12 +9,16 @@ public class Player : MonoBehaviour
     private float rotation;
     public float gravity;
 
-    private Vector3 MoveDirection;
-    
+    private Vector3 MoveDirection;   
     private CharacterController _controller; // componente que detecta todo o ambiente do Terrain (faz a função do OnCollisionEnter)
     private Animator _animator;
 
     bool attackIsReady = true;
+
+    List<Transform> EnemyList = new List<Transform>(); // -> criando uma list que recebera um inimigo toda vez que o player atacar o mesmo (Para evitar BUGS) 
+    public float colliderRadius; // -----------------------> area de atuação do ataque do player
+
+    public float enemyDamage = 10f;
 
     // Start is called before the first frame update
     void Start()
@@ -34,7 +38,7 @@ public class Player : MonoBehaviour
     {
         // Movement
         if (_controller.isGrounded)
-{
+        {
             if (Input.GetKey(KeyCode.W)) // start move
             {
                 if (_animator.GetBool("Attack1") == false)
@@ -102,12 +106,45 @@ public class Player : MonoBehaviour
             _animator.SetBool("Attack1", true);
             _animator.SetInteger("Transition", 2);
 
-            yield return new WaitForSeconds(1.3f);
+            yield return new WaitForSeconds(0.5f);
+
+            GetEnemyRange();
+
+            foreach (Transform enemies in EnemyList)
+            {
+                // executar ação de dano no inimigo
+                Enemy enemy = enemies.GetComponent<Enemy>();
+
+                if (enemy != null)
+                {
+                    enemy.GetHit(enemyDamage);
+                }
+            }
+
+            yield return new WaitForSeconds(0.8f);
 
             _animator.SetInteger("Transition", transitionValue);
             _animator.SetBool("Attack1", false);
             attackIsReady = true;
 
         }
+    }
+
+    void GetEnemyRange()
+    {
+        EnemyList.Clear(); // limpa a lista pra nao bugar pois quando matamos um inimigo ele deve ser apagado da lista
+        // OverlapSphere cria um colisor em forma de esfera invisivel e passamos a posição dele (posição atual do personagem + 1 no eixo Z * radius pra dar um tamanho para ela)
+        foreach (Collider c in Physics.OverlapSphere((transform.position + transform.forward * colliderRadius), colliderRadius))
+        {
+            if (c.gameObject.CompareTag("Enemy"))
+            {
+                EnemyList.Add(c.transform); // adiciona um inimido na lista
+            }
+        }
+    }
+    private void OnDrawGizmosSelected()
+    {
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireSphere(transform.position + transform.forward, colliderRadius);
     }
 }
